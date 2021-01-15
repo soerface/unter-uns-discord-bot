@@ -9,6 +9,8 @@ pylint = "*"
 [packages]
 "discord.py" = "*"
 redis = "*"
+pynacl = "*"
+jinja2 = "*"
 
 [requires]
 python_version = "3.7"

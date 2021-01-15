@@ -1,16 +1,15 @@
 import random
 
 import discord
-from redis import Redis
+from .base import BaseGame
 
 
-class Insider:
+class Insider(BaseGame):
+    """Der Spielleiter überlegt sich ein Wort, das Team stellt Ja-Nein Fragen um das Wort in 5 Minuten zu erraten.
+Findet danach den Insider - er wusste von Anfang an Bescheid! 😱
+    """
 
-    def __init__(self, client: discord.Client, db: Redis):
-        self.client = client
-        self.db = db
-
-    async def on_player_message(self, message: discord.Message):
+    async def on_private_message(self, message: discord.Message):
         player_name, player_id = message.author.display_name, message.author.id
         master = self.db.get("insider:master")
         insider = self.db.get("insider:insider")

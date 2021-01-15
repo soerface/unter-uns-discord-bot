@@ -4,6 +4,7 @@ import os
 import discord
 import redis
 import games
+import settings
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
                     level=logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO")))
@@ -12,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class DiscordClient(discord.Client):
-    CMD_PREFIX = "!"
 
     def __init__(self, *args, **kwargs):
         super(DiscordClient, self).__init__(*args, **kwargs)
@@ -22,29 +22,29 @@ class DiscordClient(discord.Client):
         }
 
     async def on_ready(self):
-        logger.info("Ready")
+        P = discord.Permissions
+        permissions_to_ask_for = P(P.text().value | P.voice().value)
+        oauth_url = discord.utils.oauth_url(self.user.id, permissions_to_ask_for)
+        logger.info(f"Ready. Add me to your server with this link: {oauth_url}")
 
     async def on_message(self, message: discord.Message):
         logger.info(f"Received message: {message}")
         if message.channel.type.name == "private":
-            await games.Insider(self, self.db).on_player_message(message)
+            # TODO: determine to which gameclass to send it to
+            await games.Insider(self, self.db).on_private_message(message)
             return
-        game_class = self.games.get(message.channel.name)
-        if not game_class:
+        GameClass = self.games.get(message.channel.name)
+        if not GameClass:
             return
-        if not message.clean_content.startswith(DiscordClient.CMD_PREFIX):
+        if not message.clean_content.startswith(settings.CMD_PREFIX):
             return
-        cmd = message.clean_content.replace(DiscordClient.CMD_PREFIX, "", 1).lower()
-        game = game_class(self, self.db)
+        cmd = message.clean_content.replace(settings.CMD_PREFIX, "", 1).lower()
+        game = GameClass(self, self.db)
         method = getattr(game, f"on_{cmd}_command", None)
         if not method:
-            await message.channel.send("Den Befehl kenne ich leider nicht :(")
-            return
+            await message.channel.send("Unbekannter Befehl.")
+            method = game.on_help_command
         await method(message)
-
-    async def handle_start_command(self, message: discord.Message):
-        # self.db.put(f"game:{message}")
-        await message.channel.send("Let's start")
 
 
 client = DiscordClient()
